@@ -1,5 +1,7 @@
 // Format string literals.
 
+use core::fmt;
+
 use regex::Regex;
 use unicode_categories::UnicodeCategories;
 use unicode_segmentation::UnicodeSegmentation;
@@ -11,6 +13,7 @@ use crate::utils::{unicode_str_width, wrap_str};
 const MIN_STRING: usize = 10;
 
 /// Describes the layout of a piece of text.
+#[derive(Clone)]
 pub(crate) struct StringFormat<'a> {
     /// The opening sequence of characters for the piece of text
     pub(crate) opener: &'a str,
@@ -58,6 +61,20 @@ impl<'a> StringFormat<'a> {
     /// SnippetState::EndWithLineFeed.
     fn max_width_without_indent(&self) -> Option<usize> {
         self.config.max_width().checked_sub(self.line_end.len())
+    }
+}
+
+impl<'a> fmt::Debug for StringFormat<'a> {
+    /// Omits lengthy config field
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("StringFormat")
+            .field("opener", &self.opener)
+            .field("closer", &self.closer)
+            .field("line_start", &self.line_start)
+            .field("line_end", &self.line_end)
+            .field("shape", &self.shape)
+            .field("trim_end", &self.trim_end)
+            .finish()
     }
 }
 

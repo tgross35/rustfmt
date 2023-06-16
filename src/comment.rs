@@ -38,7 +38,7 @@ fn is_custom_comment(comment: &str) -> bool {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub(crate) enum CommentStyle<'a> {
     DoubleSlash,
     TripleSlash,
@@ -366,7 +366,7 @@ fn identify_comment(
         if !config.normalize_comments() && has_bare_lines && style.is_block_comment() {
             trim_left_preserve_layout(first_group, shape.indent, config)?
         } else if !config.normalize_comments()
-            && !config.wrap_comments()
+            && !config.format_comments()
             && !config.format_code_in_doc_comments()
         {
             light_rewrite_comment(first_group, shape.indent, config, is_doc_comment)
@@ -730,7 +730,7 @@ impl<'a> CommentRewrite<'a> {
                             && !self.code_block_buffer.trim().is_empty() =>
                     {
                         let mut config = self.fmt.config.clone();
-                        config.set().wrap_comments(false);
+                        config.set().format_comments(false);
                         let comment_max_width = config
                             .doc_comment_code_block_width()
                             .min(config.max_width());
@@ -766,7 +766,7 @@ impl<'a> CommentRewrite<'a> {
         self.item_block = None;
         if let Some(stripped) = line.strip_prefix("```") {
             self.code_block_attr = Some(CodeBlockAttribute::new(stripped))
-        } else if self.fmt.config.wrap_comments() && ItemizedBlock::is_itemized_line(line) {
+        } else if self.fmt.config.format_comments() && ItemizedBlock::is_itemized_line(line) {
             let ib = ItemizedBlock::new(line);
             self.item_block = Some(ib);
             return false;
@@ -798,21 +798,24 @@ impl<'a> CommentRewrite<'a> {
         let is_markdown_header_doc_comment = is_doc_comment && line.starts_with("#");
 
         // We only want to wrap the comment if:
-        // 1) wrap_comments = true is configured
+        // 1) format_comments = true is configured
         // 2) The comment is not the start of a markdown header doc comment
         // 3) The comment width exceeds the shape's width
         // 4) No URLS were found in the comment
         // If this changes, the documentation in ../Configurations.md#wrap_comments
         // should be changed accordingly.
-        let should_wrap_comment = self.fmt.config.wrap_comments()
-            && !is_markdown_header_doc_comment
-            && unicode_str_width(line) > self.fmt.shape.width
-            && !has_url(line)
-            && !is_table_item(line);
+        let should_fmt_comment = self.fmt.config.format_comments();
+        // && !is_markdown_header_doc_comment
+        // && unicode_str_width(line) > self.fmt.shape.width
+        // && !has_url(line)
+        // && !is_table_item(line);
 
-        if should_wrap_comment {
+        if should_fmt_comment {
+            dbg!(&line);
+            // dbg!(&self.fmt);
             match rewrite_string(line, &self.fmt, self.max_width) {
                 Some(ref s) => {
+                    dbg!(&s);
                     self.is_prev_line_multi_line = s.contains('\n');
                     self.result.push_str(s);
                 }
@@ -898,7 +901,7 @@ fn rewrite_comment_inner(
                 (line, has_leading_whitespace || config.normalize_comments())
             }
         });
-
+    dbg!(lines.clone().collect::<Vec<_>>());
     for (i, (line, has_leading_whitespace)) in lines.enumerate() {
         if rewriter.handle_line(orig, i, line, has_leading_whitespace, is_doc_comment) {
             break;
@@ -1866,11 +1869,11 @@ mod test {
     #[rustfmt::skip]
     fn format_doc_comments() {
         let mut wrap_normalize_config: crate::config::Config = Default::default();
-        wrap_normalize_config.set().wrap_comments(true);
+        wrap_normalize_config.set().format_comments(true);
         wrap_normalize_config.set().normalize_comments(true);
 
         let mut wrap_config: crate::config::Config = Default::default();
-        wrap_config.set().wrap_comments(true);
+        wrap_config.set().format_comments(true);
 
         let comment = rewrite_comment(" //test",
                                       true,

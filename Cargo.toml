@@ -58,6 +58,7 @@ unicode-width = "0.1"
 unicode_categories = "0.1"
 
 rustfmt-config_proc_macro = { version = "0.3", path = "config_proc_macro" }
+comrak = "0.18.0"
 
 # Rustc dependencies are loaded from the sysroot, Cargo doesn't know about them.
 
